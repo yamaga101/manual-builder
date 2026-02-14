@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
 import { useDocumentStore } from "@/stores/document-store";
 import {
   getDocument,
@@ -26,9 +25,22 @@ function EditorLoading() {
   );
 }
 
+function useDocumentId(): string | undefined {
+  const [id, setId] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    // Read document ID from URL hash (e.g., /editor#abc123)
+    const hash = window.location.hash.slice(1);
+    if (hash) {
+      setId(hash);
+    }
+  }, []);
+
+  return id;
+}
+
 export default function EditorPage() {
-  const params = useParams();
-  const documentId = (params.id as string[] | undefined)?.[0];
+  const documentId = useDocumentId();
   const [ready, setReady] = useState(false);
 
   const setDocument = useDocumentStore((s) => s.setDocument);
@@ -76,6 +88,9 @@ export default function EditorPage() {
       setDocument(newDoc);
       setPages([firstPage]);
       setActivePageId(firstPageId);
+
+      // Update URL hash with new document ID
+      window.location.hash = newDocId;
       setReady(true);
     }
 

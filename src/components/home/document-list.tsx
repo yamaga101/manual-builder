@@ -23,12 +23,11 @@ export function DocumentList() {
   }, []);
 
   const handleCreate = () => {
-    const id = crypto.randomUUID();
-    router.push(`/editor/${id}`);
+    router.push("/editor");
   };
 
   const handleOpen = (id: string) => {
-    router.push(`/editor/${id}`);
+    router.push(`/editor#${id}`);
   };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
