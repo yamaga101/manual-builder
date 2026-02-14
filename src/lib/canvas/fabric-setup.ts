@@ -1,4 +1,4 @@
-import { Canvas } from "fabric";
+import { Canvas, Line, type FabricObject } from "fabric";
 import { A4_WIDTH, A4_HEIGHT } from "@/types/document";
 
 export interface CanvasSetupOptions {
@@ -39,42 +39,55 @@ export function createFabricCanvas(
   return canvas;
 }
 
+const GRID_TAG = "__grid__";
+
+function isGridLine(obj: FabricObject): boolean {
+  return (obj as unknown as { _gridTag?: string })._gridTag === GRID_TAG;
+}
+
+function tagAsGrid(obj: FabricObject): void {
+  (obj as unknown as { _gridTag: string })._gridTag = GRID_TAG;
+}
+
 export function drawGrid(canvas: Canvas, gridSize: number) {
   // Remove existing grid lines
   const objects = canvas.getObjects();
-  const gridLines = objects.filter(
-    (obj) => (obj as Record<string, unknown>).isGrid === true
-  );
+  const gridLines = objects.filter(isGridLine);
   gridLines.forEach((line) => canvas.remove(line));
 
-  // We'll use a simpler approach - draw grid via canvas background
-  // This avoids polluting the object list
-  const gridCanvas = document.createElement("canvas");
-  gridCanvas.width = gridSize;
-  gridCanvas.height = gridSize;
-  const ctx = gridCanvas.getContext("2d");
-  if (!ctx) return;
+  // Draw grid as non-interactive lines
+  for (let x = gridSize; x < A4_WIDTH; x += gridSize) {
+    const line = new Line([x, 0, x, A4_HEIGHT], {
+      stroke: "#e0e0e0",
+      strokeWidth: 0.5,
+      selectable: false,
+      evented: false,
+      excludeFromExport: true,
+    });
+    tagAsGrid(line);
+    canvas.add(line);
+    canvas.sendObjectToBack(line);
+  }
 
-  ctx.strokeStyle = "#e0e0e0";
-  ctx.lineWidth = 0.5;
-  ctx.beginPath();
-  ctx.moveTo(gridSize, 0);
-  ctx.lineTo(gridSize, gridSize);
-  ctx.moveTo(0, gridSize);
-  ctx.lineTo(gridSize, gridSize);
-  ctx.stroke();
+  for (let y = gridSize; y < A4_HEIGHT; y += gridSize) {
+    const line = new Line([0, y, A4_WIDTH, y], {
+      stroke: "#e0e0e0",
+      strokeWidth: 0.5,
+      selectable: false,
+      evented: false,
+      excludeFromExport: true,
+    });
+    tagAsGrid(line);
+    canvas.add(line);
+    canvas.sendObjectToBack(line);
+  }
 
-  const pattern = new (window as unknown as Record<string, unknown>).fabric
-    .Pattern({
-    source: gridCanvas,
-    repeat: "repeat",
-  }) as string;
-
-  canvas.set("backgroundColor", pattern);
   canvas.requestRenderAll();
 }
 
 export function clearGrid(canvas: Canvas) {
-  canvas.set("backgroundColor", "#ffffff");
+  const objects = canvas.getObjects();
+  const gridLines = objects.filter(isGridLine);
+  gridLines.forEach((line) => canvas.remove(line));
   canvas.requestRenderAll();
 }
