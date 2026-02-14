@@ -181,6 +181,16 @@ export function MainToolbar({ onExport, onImageUpload }: MainToolbarProps) {
         icon={<Diamond className="h-4 w-4" />}
         label="Decision"
       />
+      <ToolButton
+        tool="flowchart-oval"
+        icon={<Circle className="h-4 w-4" />}
+        label="Start/End"
+      />
+      <ToolButton
+        tool="connector"
+        icon={<ArrowRight className="h-4 w-4" />}
+        label="Connector"
+      />
 
       <div className="flex-1" />
 
