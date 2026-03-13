@@ -1,13 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useDocumentStore } from "@/stores/document-store";
 import {
   getDocument,
   getPagesByIds,
   saveDocumentWithPages,
 } from "@/lib/storage/document-repository";
+import { useExtensionListener } from "@/hooks/use-extension-listener";
 import type { ManualDocument, PageData } from "@/types/document";
 
 // Dynamic import with SSR disabled - Fabric.js requires DOM
@@ -25,22 +26,34 @@ function EditorLoading() {
   );
 }
 
-function useDocumentId(): string | undefined {
-  const [id, setId] = useState<string | undefined>(undefined);
+function ImportWaiting() {
+  return (
+    <div className="h-screen flex flex-col items-center justify-center gap-4">
+      <div className="animate-pulse text-primary text-lg font-medium">
+        録画データを待機中...
+      </div>
+      <p className="text-muted-foreground text-sm">
+        Chrome拡張から送信してください
+      </p>
+    </div>
+  );
+}
+
+function useHashValue(): string {
+  const [hash, setHash] = useState("");
 
   useEffect(() => {
-    // Read document ID from URL hash (e.g., /editor#abc123)
-    const hash = window.location.hash.slice(1);
-    if (hash) {
-      setId(hash);
-    }
+    setHash(window.location.hash.slice(1));
   }, []);
 
-  return id;
+  return hash;
 }
 
 export default function EditorPage() {
-  const documentId = useDocumentId();
+  const hash = useHashValue();
+  const isImportMode = hash === "import";
+  const documentId = isImportMode ? undefined : hash || undefined;
+
   const [ready, setReady] = useState(false);
 
   const setDocument = useDocumentStore((s) => s.setDocument);
@@ -48,7 +61,27 @@ export default function EditorPage() {
   const setActivePageId = useDocumentStore((s) => s.setActivePageId);
   const reset = useDocumentStore((s) => s.reset);
 
+  // Handle import completion from extension
+  const handleImportComplete = useCallback(
+    async (newDocId: string) => {
+      const doc = await getDocument(newDocId);
+      if (!doc) return;
+      const pages = await getPagesByIds(doc.pageIds);
+      reset();
+      setDocument(doc);
+      setPages(pages);
+      setActivePageId(pages[0]?.id ?? null);
+      window.location.hash = newDocId;
+      setReady(true);
+    },
+    [reset, setDocument, setPages, setActivePageId],
+  );
+
+  useExtensionListener(isImportMode && !ready, handleImportComplete);
+
   useEffect(() => {
+    if (isImportMode) return; // Wait for extension data
+
     async function load() {
       reset();
 
@@ -96,7 +129,11 @@ export default function EditorPage() {
 
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [documentId]);
+  }, [documentId, isImportMode]);
+
+  if (isImportMode && !ready) {
+    return <ImportWaiting />;
+  }
 
   if (!ready) {
     return <EditorLoading />;

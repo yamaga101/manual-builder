@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, FileText, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ImportButton } from "@/components/home/import-button";
 import { getAllDocuments, deleteDocument } from "@/lib/storage/document-repository";
 import type { ManualDocument } from "@/types/document";
 
@@ -58,10 +59,13 @@ export function DocumentList() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold">Your Manuals</h2>
-        <Button onClick={handleCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Manual
-        </Button>
+        <div className="flex items-center gap-2">
+          <ImportButton />
+          <Button onClick={handleCreate}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Manual
+          </Button>
+        </div>
       </div>
 
       {documents.length === 0 ? (
